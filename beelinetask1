@@ -1,0 +1,265 @@
+#libraries
+
+library("gdata")
+library("dplyr")
+library('readr') # data input
+library("magrittr")
+library("stringr")
+library("sqldf")
+library("googleVis")
+library("devtools")
+library("ggplot2")
+library("maps")
+library("ggmap")
+library("scales")
+library("gridExtra")
+library("grid")
+library("ggthemes")
+library("RColorBrewer")
+library("ggrepel")
+library("wesanderson")
+
+# Data loading
+
+august_15 <- read.csv("/Users/botamukatova/Documents/Beeline/Кеис/Задание 1/August'2015.csv")
+
+september_15 <- read.csv("/Users/botamukatova/Documents/Beeline/Кеис/Задание 1/September'2015.csv")
+
+# Data Overview
+
+summary(august_15)
+
+str(august_15)
+str(september_15)
+
+# Data Preprocessing
+
+august_average <- sqldf("select MARKET_KEY, avg(REVENUE_TOTAL), avg(REVENUE_VOICE), avg(REVENUE_DATA), avg(TRAFFIC_DATA), avg(MOU) from august_15 group by MARKET_KEY ")
+
+colnames(august_average)
+august_average
+
+august_average$MARKET_KEY <- gsub("AKT", "AKTAU", august_average$MARKET_KEY)
+august_average$MARKET_KEY <- gsub("AST", "ASTANA", august_average$MARKET_KEY)
+august_average$MARKET_KEY <- gsub("ATB", "AKTOBE", august_average$MARKET_KEY)
+august_average$MARKET_KEY <- gsub("ATR", "ATYRAU", august_average$MARKET_KEY)
+august_average$MARKET_KEY <- gsub("KAR", "KARAGANDY", august_average$MARKET_KEY)
+august_average$MARKET_KEY <- gsub("KOS", "KOSTANAY", august_average$MARKET_KEY)
+august_average$MARKET_KEY <- gsub("KZO", "KYZYLORDA", august_average$MARKET_KEY)
+august_average$MARKET_KEY <- gsub("KZT", "ALMATY", august_average$MARKET_KEY)
+august_average$MARKET_KEY <- gsub("ORA", "URALSK", august_average$MARKET_KEY)
+august_average$MARKET_KEY <- gsub("OSK", "OSKEMEN", august_average$MARKET_KEY)
+august_average$MARKET_KEY <- gsub("PTP", "PETROPAVL", august_average$MARKET_KEY)
+august_average$MARKET_KEY <- gsub("PVL", "PAVLODAR", august_average$MARKET_KEY)
+august_average$MARKET_KEY <- gsub("SHM", "SHYMKENT", august_average$MARKET_KEY)
+august_average$MARKET_KEY <- gsub("TRZ", "TARAZ", august_average$MARKET_KEY)
+
+nrow(august_average)
+
+# Data Visualization
+
+chart1 <- 
+  gvisGeoChart(august_average, 
+               locationvar = "MARKET_KEY",
+               colorvar = "avg(REVENUE_TOTAL)",
+               options = list(region = "KZ",
+                              displayMode = "markers",
+                              resolution = "provinces",
+                              showZoomOut = TRUE)
+  )
+plot(chart1)
+
+september_average <- sqldf("select MARKET_KEY, avg(REVENUE_TOTAL), avg(REVENUE_VOICE), avg(REVENUE_DATA), avg(TRAFFIC_DATA), avg(MOU) from september_15 group by MARKET_KEY ")
+
+september_average$MARKET_KEY <- gsub("AKT", "AKTAU", september_average$MARKET_KEY)
+september_average$MARKET_KEY <- gsub("AST", "ASTANA", september_average$MARKET_KEY)
+september_average$MARKET_KEY <- gsub("ATB", "AKTOBE", september_average$MARKET_KEY)
+september_average$MARKET_KEY <- gsub("ATR", "ATYRAU", september_average$MARKET_KEY)
+september_average$MARKET_KEY <- gsub("KAR", "KARAGANDY", september_average$MARKET_KEY)
+september_average$MARKET_KEY <- gsub("KOS", "KOSTANAY", september_average$MARKET_KEY)
+september_average$MARKET_KEY <- gsub("KZO", "KYZYLORDA", september_average$MARKET_KEY)
+september_average$MARKET_KEY <- gsub("KZT", "ALMATY", september_average$MARKET_KEY)
+september_average$MARKET_KEY <- gsub("ORA", "URALSK", september_average$MARKET_KEY)
+september_average$MARKET_KEY <- gsub("OSK", "OSKEMEN", september_average$MARKET_KEY)
+september_average$MARKET_KEY <- gsub("PTP", "PETROPAVL", september_average$MARKET_KEY)
+september_average$MARKET_KEY <- gsub("PVL", "PAVLODAR", september_average$MARKET_KEY)
+september_average$MARKET_KEY <- gsub("SHM", "SHYMKENT", september_average$MARKET_KEY)
+september_average$MARKET_KEY <- gsub("TRZ", "TARAZ", september_average$MARKET_KEY)
+
+chart2 <- 
+  gvisGeoChart(september_average, 
+               locationvar = "MARKET_KEY",
+               colorvar = "avg(REVENUE_TOTAL)",
+               options = list(region = "KZ",
+                              displayMode = "markers",
+                              resolution = "provinces",
+                              showZoomOut = TRUE)
+  )
+plot(chart2)
+
+population_regions <- data.frame("region" = september_average$MARKET_KEY, "population" = c(626777, 872655, 834813, 594576, 1385037, 883658, 765227, 1703481, 636875, 1396086, 569507, 758595, 2840557, 1110965)) 
+
+population_regions <- population_regions[order(-population_regions$population),]
+
+chart3 <- gvisTable(population_regions, 
+                    options = list(width = 200, height = 350))
+
+chart4 <- gvisMerge(chart2, chart3, horizontal = TRUE)
+
+chart5 <- gvisMerge(chart1, chart3, horizontal = TRUE)
+
+plot(chart4)
+plot(chart5)
+
+# merging August and September data
+
+MONTH <- rep("AUGUST", nrow(august_15))
+august <- cbind(august_15, MONTH)
+
+MONTH <- rep("SEPTEMBER", nrow(september_15))
+september <- cbind(september_15, MONTH)
+
+full <- rbind(august, september)
+head(full)
+
+write.csv(full, file = "full_data.csv")
+
+data_sum <- full %>%
+  group_by(MONTH, MARKET_KEY) %>%
+  summarise(sum_rev_tot = sum(REVENUE_TOTAL), sum_rev_data = sum(REVENUE_DATA), sum_traf_data = sum(TRAFFIC_DATA), sum_rev_voice = sum(REVENUE_VOICE), sum_mou = sum(MOU))
+
+data_mean <- full %>%
+  group_by(MONTH, MARKET_KEY) %>%
+  summarise(mean_rev_tot = mean(REVENUE_TOTAL), mean_rev_data = mean(REVENUE_DATA), mean_traf_data = mean(TRAFFIC_DATA), mean_rev_voice = mean(REVENUE_VOICE), mean_mou = mean(MOU))
+
+data_mean
+
+a <- ggplot(data_sum, aes(x = sum_rev_tot))
+
+a + geom_area(aes(fill = MONTH), stat = "bin", alpha = 0.6) + theme_classic()
+
+#a + geom_density()
+
+# data distribution in total revenue in both monthes shows similar shape
+#a + geom_density(aes(color = MONTH))
+
+#a + geom_density(aes(fill = MONTH), alpha = 0.6) + ggtitle("Density of Total Revenue per region")
+
+b <- ggplot(data_sum, aes(x = MARKET_KEY, y = sum_rev_tot))
+
+b + geom_point(aes(color = MONTH))
+
+# total revenue for each city in each month
+ggplot(data_sum, aes(x = MARKET_KEY, y = sum_rev_tot, group = MONTH)) +
+  geom_line(aes(linetype = MONTH, color = MONTH)) +
+  geom_point(aes(shape = MONTH, color = MONTH))
+
+# revenue data mean for each city in each month
+ggplot(data_mean, aes(x = MARKET_KEY, y = mean_rev_data, group = MONTH)) +
+  geom_line(aes(linetype = MONTH, color = MONTH)) +
+  geom_point(aes(shape = MONTH, color = MONTH))
+
+# Total revenue data for each city in each month
+ggplot(data_sum, aes(x = MARKET_KEY, y = sum_rev_data, group = MONTH)) +
+  geom_line(aes(linetype = MONTH, color = MONTH)) +
+  geom_point(aes(shape = MONTH, color = MONTH))
+
+g <- ggplot(data = data_sum, aes(x = MARKET_KEY, y = sum_rev_tot, fill = MONTH))
+
+m <- ggplot(data = data_mean, aes(x = MARKET_KEY, y = mean_rev_tot, fill = MONTH))
+
+# BAR plot: total revenue for each city in each month
+g + geom_bar(stat = "identity", position = position_dodge())
+
+# BAR plot: total revenue mean for each city in each month
+m + geom_bar(stat = "identity", position = position_dodge())
+
+# Scatter plots
+
+august_sum <- sqldf("select MARKET_KEY, sum(REVENUE_TOTAL) as sum_rev_tot, sum(REVENUE_VOICE) as sum_rev_voice, sum(REVENUE_DATA) as sum_rev_data, sum(TRAFFIC_DATA) as sum_traf_data, sum(MOU) as sum_mou from august_15 group by MARKET_KEY ")
+
+september_sum <- sqldf("select MARKET_KEY, sum(REVENUE_TOTAL) as sum_rev_tot, sum(REVENUE_VOICE) as sum_rev_voice, sum(REVENUE_DATA) as sum_rev_data, sum(TRAFFIC_DATA) as sum_traf_data, sum(MOU) as sum_mou from september_15 group by MARKET_KEY ")
+
+head(august_sum)
+
+b <- ggplot(data = august_sum, aes(x = MARKET_KEY, y = sum_rev_tot))
+
+b + geom_bar(stat = "identity")
+
+# Revenue Voice
+
+august_sum %>% ggplot(aes(x = reorder(MARKET_KEY, sum_rev_voice), y=sum_rev_voice, fill = sum_rev_voice)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  theme_fivethirtyeight() +
+  scale_fill_gradientn(name='km', colors = rev(brewer.pal(10, 'Spectral'))) +
+  theme(legend.text = element_text(size = 6)) +
+  ggtitle("August: Sum of Voice Revenue per Region")
+
+september_sum %>% ggplot(aes(x = reorder(MARKET_KEY, sum_rev_voice), y=sum_rev_voice, fill = sum_rev_voice)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  theme_fivethirtyeight() +
+  scale_fill_gradientn(name='km', colors = rev(brewer.pal(10, 'Spectral'))) +
+  theme(legend.text = element_text(size = 6)) +
+  ggtitle("September: Sum of Voice Revenue per Region")
+
+# August: Revenue Data and Traffic Data
+
+t <- ggplot(data = august_sum, aes(x = sum_traf_data, y = sum_rev_data, fill = MARKET_KEY)) +
+  geom_point() +
+  geom_label_repel(aes(label = MARKET_KEY),
+                   fontface = 'bold', color = 'black',
+                   box.padding = unit(0.35, "lines"),
+                   point.padding = unit(0.5, "lines"),
+                   segment.color = 'grey50', alpha = .5) +
+  theme(legend.position = 'bottom') +
+  scale_fill_manual(values=colorRampPalette(blues9)(length(unique(august_sum$MARKET_KEY))))
+t + guides(fill = FALSE) + xlab('Sum of Traffic Data') +ylab('Sum of Revenue Data')
+
+# September: Revenue Data and Traffic Data
+
+t <- ggplot(data = september_sum, aes(x = sum_traf_data, y = sum_rev_data, fill = MARKET_KEY)) +
+  geom_point() +
+  geom_label_repel(aes(label = MARKET_KEY),
+                   fontface = 'bold', color = 'black',
+                   box.padding = unit(0.35, "lines"),
+                   point.padding = unit(0.5, "lines"),
+                   segment.color = 'grey50', alpha = .5) +
+  theme(legend.position = 'bottom') +
+  scale_fill_manual(values=colorRampPalette(blues9)(length(unique(august_sum$MARKET_KEY))))
+
+t + guides(fill = FALSE) + xlab('Sum of Traffic Data') +ylab('Sum of Revenue Data')
+
+# Voice
+
+v <- ggplot(data = data_sum, aes(x = MARKET_KEY, y = sum_rev_voice, fill = MONTH))
+
+v + stat_identity(geom = "bar", position = "dodge") + xlab('Market_Key') + ylab("Sum of Voice Revenue")
+
+vu <- ggplot(data = data_sum, aes(x = MARKET_KEY, y = sum_mou, fill = MONTH))
+
+vu + stat_identity(geom = "bar", position = "dodge") + xlab('Market_Key') + ylab("Sum of Voice Usage")
+
+# REVENUE_TOTAL summary for each month
+qplot(MONTH, sum_rev_tot, data = data_sum, geom = "boxplot", fill = MONTH)
+
+# Date
+
+head(full)
+
+full$Year <- format(as.Date(full$Year, format="%Y-%M-%D"), "%Y")
+
+full$Year <- format(as.Date(full$Year, format = "%d/%m/%y"), "%y-%m-%d")
+
+full$Year <- gsub(x=full$SUBS_ACTIVATION_DATE_KEY, pattern = " 0:00", replacement = "", fixed = T)
+
+full$Year <- sapply(strsplit(as.character(full$Year), '/'), function(Year) Year[3])
+
+# Service activation Year Frequency
+
+d <- ggplot(full, aes(x = Year, fill = MONTH))
+
+d + geom_bar(position = "dodge") + scale_fill_manual(values = wes_palette("Royal1")) + ggtitle("Frequency of Service Activation Year: Client Since...") + xlab("Activation Year")
+
+
