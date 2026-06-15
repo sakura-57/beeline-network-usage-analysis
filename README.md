@@ -4,8 +4,6 @@ Exploratory data analysis of Beeline mobile network usage across regions of Kaza
 
 The project ingests two monthly subscriber datasets, cleans and aggregates them by market (city/region), and visualizes revenue, traffic, and usage patterns — including geographic maps of Kazakhstan, regional comparisons, and subscriber tenure analysis.
 
-> *Originally completed in summer 2017.*
-
 ---
 
 ## Overview
